@@ -96,6 +96,7 @@ repositories {
     maven { url = "https://maven.enjarai.dev/mirrors" }
 
     mavenCentral()
+    maven { url = "https://www.cursemaven.com" }
 }
 
 dependencies {
@@ -189,6 +190,8 @@ dependencies {
 
     modCompileOnly("maven.modrinth:mekanism-generators:Th4Czz4N")
     modCompileOnly("maven.modrinth:mekanism:10.4.16.80")
+    modCompileOnly("curse.maven:viltrumite-flight-1528087:8411529")
+    modCompileOnly("curse.maven:viltrumite-1553010:8430880")
 }
 
 afterEvaluate {

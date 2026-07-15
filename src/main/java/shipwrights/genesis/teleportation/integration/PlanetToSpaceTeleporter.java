@@ -3,6 +3,8 @@ package shipwrights.genesis.teleportation.integration;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -11,12 +13,14 @@ import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.core.api.ships.LoadedServerShip;
+import org.valkyrienskies.mod.common.util.VectorConversionsMCKt;
 import shipwrights.genesis.GenesisMod;
 import shipwrights.genesis.config.GenesisCommonConfig;
 import shipwrights.genesis.space.Celestial;
 import shipwrights.genesis.space.VantagePoint;
 import shipwrights.genesis.teleportation.DimensionTravelTeleporter;
 import shipwrights.genesis.teleportation.TravelDirection;
+import shipwrights.genesis.teleportation.impl.EntityTeleporter;
 
 import static shipwrights.genesis.teleportation.integration.Util.getSortedShips;
 
@@ -60,6 +64,19 @@ public class PlanetToSpaceTeleporter {
 							computeSpaceTarget(vantagePoint),
 							vantagePoint.getCelestialRotation().mul(vantagePoint.cameraRotationFromNorthPole().conjugate(new Quaterniond()), new Quaterniond())
 					);
+				}
+			}
+		}
+
+		// Teleport players flying above atmosphere
+		for (ServerPlayer player : new java.util.ArrayList<>(level.players())) {
+			Vector3d playerPos = new Vector3d(player.getX(), player.getY(), player.getZ());
+			if (playerPos.y() > GenesisCommonConfig.getAtmosphereExitHeight()) {
+				if (VantagePoint.get(level, playerPos, ticks, 0f) instanceof VantagePoint.OnCelestial vantagePoint) {
+					Vector3d targetPos = computeSpaceTarget(vantagePoint);
+					Quaterniondc targetRot = new Quaterniond();
+					EntityTeleporter.teleportEntityAndPassengers(player, spaceLevel,
+							VectorConversionsMCKt.toMinecraft(targetPos), targetRot);
 				}
 			}
 		}

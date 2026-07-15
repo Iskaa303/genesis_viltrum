@@ -4,6 +4,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.SectionPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -26,6 +27,7 @@ import shipwrights.genesis.math.OBB;
 import shipwrights.genesis.space.Celestial;
 import shipwrights.genesis.teleportation.DimensionTravelTeleporter;
 import shipwrights.genesis.teleportation.TravelDirection;
+import shipwrights.genesis.teleportation.impl.EntityTeleporter;
 
 import java.util.*;
 
@@ -82,6 +84,21 @@ public class SpaceToPlanetTeleporter {
 
 			DimensionTravelTeleporter.teleportShip(ship, TravelDirection.SPACE_TO_PLANET, level, targetLevel, newPos, rotation);
 		}
+
+		// Teleport players who fly into a celestial
+		for (ServerPlayer player : new java.util.ArrayList<>(level.players())) {
+			Vector3d playerPos = new Vector3d(player.getX(), player.getY(), player.getZ());
+			Celestial nearest = getNearestPlanetForPlayer(playerPos, ticks, registry);
+			if (nearest == null) continue;
+
+			ServerLevel targetLevel = getTargetLevel(level, nearest, registry);
+			if (targetLevel == null) continue;
+
+			Vector3d newPos = computePlanetTarget(level);
+			Quaterniond rotation = new Quaterniond();
+			EntityTeleporter.teleportEntityAndPassengers(player, targetLevel,
+					VectorConversionsMCKt.toMinecraft(newPos), rotation);
+		}
 	}
 
 	private static boolean shipOverlapsCelestial(LoadedServerShip ship, AABBic shipAABB, Celestial nearest, long ticks, Registry<Celestial> registry) {
@@ -135,5 +152,14 @@ public class SpaceToPlanetTeleporter {
 			}
 		}
 		return null;
+	}
+
+	@Nullable
+	private static Celestial getNearestPlanetForPlayer(Vector3d playerPos, long ticks, Registry<Celestial> registry) {
+		return registry.stream()
+				.filter(c -> c.type().isVisitable())
+				.filter(c -> playerPos.distanceSquared(c.getPosition(ticks, registry)) < c.getActualSize() * c.getActualSize())
+				.min(Comparator.comparingDouble(c -> playerPos.distanceSquared(c.getPosition(ticks, registry))))
+				.orElse(null);
 	}
 }
